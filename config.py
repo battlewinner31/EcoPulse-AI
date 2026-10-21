@@ -1,0 +1,19 @@
+"""
+Global Configuration Constants & Operational Defaults
+"""
+
+DEFAULT_CITY = "Bengaluru"
+DEFAULT_OUTDOOR_TEMP_C = 30.0
+DEFAULT_OCCUPANCY = 45
+
+# Base Baseline Equipment Electrical Ratings (kW)
+BASE_AHU_NOMINAL_KW = 11.2
+BASE_AHU_RESISTANCE_KW = 22.8
+
+BASE_EF_LOW_KW = 2.8
+BASE_EF_PURGE_KW = 11.5
+
+BASE_PUMP_NOMINAL_KW = 4.5
+BASE_PUMP_CAVITATION_KW = 1.8
+
+BASE_MDB_NOMINAL_KW = 45.0
