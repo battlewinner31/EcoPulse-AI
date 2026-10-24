@@ -1,3 +1,4 @@
+# app.py
 import time
 import pandas as pd
 import streamlit as st
@@ -10,21 +11,29 @@ from views.tab_analytics import render_analytics_tab
 from views.tab_logbook import render_logbook_tab
 from views.tab_telemetry import render_telemetry_tab
 
+# -------------------------------------------------
 # Page Configuration
+# -------------------------------------------------
 st.set_page_config(
-    page_title="Industrial BMS - Telemetry Console",
+    page_title="EcoPulse-AI | Virtual BMS",
     page_icon="🏭",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# -------------------------------------------------
 # 1. Initialize Log Tables in State
+# -------------------------------------------------
 initialize_session_state()
 
+# -------------------------------------------------
 # 2. Render Sidebar & Gather Input Controls
+# -------------------------------------------------
 controls = render_sidebar()
 
+# -------------------------------------------------
 # 3. Execute Physics Calculations
+# -------------------------------------------------
 now_str = pd.Timestamp.now().strftime('%H:%M:%S')
 
 ahu_data = simulate_ahu(controls['sim_ahu_resistance'], controls['outdoor_temp'])
@@ -39,13 +48,25 @@ telemetry = {
     'pump': pump_data
 }
 
+# -------------------------------------------------
 # 4. Log Raw Telemetry Values
+# -------------------------------------------------
 record_telemetry_event(now_str, telemetry)
 
-# 5. Render Header & KPI Cards
+# -------------------------------------------------
+# 5. Share latest data with the AI Diagnostics page
+# -------------------------------------------------
+st.session_state["latest_telemetry"] = telemetry
+# (telemetry_history is already maintained inside logger.py)
+
+# -------------------------------------------------
+# 6. Render Header & KPI Cards
+# -------------------------------------------------
 render_kpis(telemetry, controls['outdoor_temp'])
 
-# 6. Render Tabbed Layout
+# -------------------------------------------------
+# 7. Render the original 3 tabs only
+# -------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
     "📊 Live Telemetry Overview",
     "📜 Chronological Event Log",
@@ -61,6 +82,8 @@ with tab2:
 with tab3:
     render_analytics_tab()
 
-# 7. Polling Interval Tick
+# -------------------------------------------------
+# 8. Polling Interval Tick
+# -------------------------------------------------
 time.sleep(1)
 st.rerun()
