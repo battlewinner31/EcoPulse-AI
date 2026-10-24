@@ -15,11 +15,16 @@ from views.tab_telemetry import render_telemetry_tab
 # Page Configuration
 # -------------------------------------------------
 st.set_page_config(
-    page_title="EcoPulse-AI | Virtual BMS",
+    page_title="EcoPulse AI | Virtual Building Management System",
     page_icon="🏭",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Strong branding header
+st.title("EcoPulse AI")
+st.caption("Intelligent Virtual Building Management System • Predictive Diagnostics • Energy Optimization")
+st.markdown("---")
 
 # -------------------------------------------------
 # 1. Initialize Log Tables in State
@@ -57,7 +62,6 @@ record_telemetry_event(now_str, telemetry)
 # 5. Share latest data with the AI Diagnostics page
 # -------------------------------------------------
 st.session_state["latest_telemetry"] = telemetry
-# (telemetry_history is already maintained inside logger.py)
 
 # -------------------------------------------------
 # 6. Render Header & KPI Cards

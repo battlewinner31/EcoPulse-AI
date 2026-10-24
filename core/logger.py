@@ -1,40 +1,25 @@
+# core/logger.py
 import pandas as pd
 import streamlit as st
-from pathlib import Path
-
-# Create a data folder if it doesn't exist
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
-
-EVENT_LOG_FILE = DATA_DIR / "event_log.csv"
-HISTORY_FILE = DATA_DIR / "telemetry_history.csv"
 
 
 def initialize_session_state():
-    """Load existing data from disk or create empty DataFrames."""
-    
+    """Initializes persistent DataFrame tables inside Streamlit session state."""
     if 'event_log' not in st.session_state:
-        if EVENT_LOG_FILE.exists():
-            st.session_state.event_log = pd.read_csv(EVENT_LOG_FILE)
-        else:
-            st.session_state.event_log = pd.DataFrame(columns=[
-                'Timestamp', 'System ID', 'Parameter Name', 'Recorded Value',
-                'Unit', 'Instantaneous Power (kW)', 'Operational Status'
-            ])
+        st.session_state.event_log = pd.DataFrame(columns=[
+            'Timestamp', 'System ID', 'Parameter Name', 'Recorded Value',
+            'Unit', 'Instantaneous Power (kW)', 'Operational Status'
+        ])
 
     if 'telemetry_history' not in st.session_state:
-        if HISTORY_FILE.exists():
-            st.session_state.telemetry_history = pd.read_csv(HISTORY_FILE)
-        else:
-            st.session_state.telemetry_history = pd.DataFrame(columns=[
-                'Timestamp', 'Total_kW', 'AHU_kW', 'EF_kW',
-                'MDB_kW', 'Pump_kW', 'Power_Factor'
-            ])
+        st.session_state.telemetry_history = pd.DataFrame(columns=[
+            'Timestamp', 'Total_kW', 'AHU_kW', 'EF_kW',
+            'MDB_kW', 'Pump_kW', 'Power_Factor'
+        ])
 
 
 def record_telemetry_event(now_str: str, telemetry: dict):
     """Appends physical sensor readouts into the historical event log."""
-    
     new_logs = [
         {
             "Timestamp": now_str,
@@ -103,7 +88,7 @@ def record_telemetry_event(now_str: str, telemetry: dict):
 
     st.session_state.event_log = pd.concat(
         [pd.DataFrame(new_logs), st.session_state.event_log]
-    ).head(300)   # keep last 300 entries
+    ).head(500)
 
     new_history = {
         'Timestamp': now_str,
@@ -117,13 +102,4 @@ def record_telemetry_event(now_str: str, telemetry: dict):
 
     st.session_state.telemetry_history = pd.concat(
         [st.session_state.telemetry_history, pd.DataFrame([new_history])]
-    ).tail(200)   # keep last 200 points for charts
-
-
-def save_to_disk():
-    """Save current session data to CSV files so it survives refresh."""
-    try:
-        st.session_state.event_log.to_csv(EVENT_LOG_FILE, index=False)
-        st.session_state.telemetry_history.to_csv(HISTORY_FILE, index=False)
-    except Exception as e:
-        st.warning(f"Could not save data to disk: {e}")
+    ).tail(300)   # longer history for predictive layer
