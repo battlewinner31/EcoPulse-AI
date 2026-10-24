@@ -7,12 +7,14 @@ from components.metrics import render_kpis
 from components.sidebar import render_sidebar
 from core.logger import initialize_session_state, record_telemetry_event
 from core.physics import simulate_ahu, simulate_ef, simulate_mdb, simulate_pump
+from core.diagnostics import diagnose
 from views.tab_analytics import render_analytics_tab
 from views.tab_logbook import render_logbook_tab
 from views.tab_telemetry import render_telemetry_tab
+from views.tab_diagnostics import render_diagnostics_tab
 
 # -------------------------------------------------
-# Page Configuration
+# Page Config
 # -------------------------------------------------
 st.set_page_config(
     page_title="EcoPulse AI | Virtual Building Management System",
@@ -21,60 +23,55 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Strong branding header
+# -------------------------------------------------
+# Branding Header
+# -------------------------------------------------
 st.title("EcoPulse AI")
-st.caption("Intelligent Virtual Building Management System • Predictive Diagnostics • Energy Optimization")
+st.caption("Intelligent Virtual Building Management System  •  Predictive Diagnostics  •  Energy Optimization")
 st.markdown("---")
 
 # -------------------------------------------------
-# 1. Initialize Log Tables in State
+# Initialize + Controls
 # -------------------------------------------------
 initialize_session_state()
-
-# -------------------------------------------------
-# 2. Render Sidebar & Gather Input Controls
-# -------------------------------------------------
 controls = render_sidebar()
 
 # -------------------------------------------------
-# 3. Execute Physics Calculations
+# Physics Simulation
 # -------------------------------------------------
 now_str = pd.Timestamp.now().strftime('%H:%M:%S')
 
 ahu_data = simulate_ahu(controls['sim_ahu_resistance'], controls['outdoor_temp'])
-ef_data = simulate_ef(controls['sim_co_shift'])
+ef_data  = simulate_ef(controls['sim_co_shift'])
 mdb_data = simulate_mdb(controls['sim_pf_drop'], ahu_data['power_kw'], ef_data['power_kw'])
 pump_data = simulate_pump(controls['sim_pump_cavitation'])
 
 telemetry = {
-    'ahu': ahu_data,
-    'ef': ef_data,
-    'mdb': mdb_data,
-    'pump': pump_data
+    "ahu": ahu_data,
+    "ef": ef_data,
+    "mdb": mdb_data,
+    "pump": pump_data
 }
 
 # -------------------------------------------------
-# 4. Log Raw Telemetry Values
+# Logging
 # -------------------------------------------------
 record_telemetry_event(now_str, telemetry)
-
-# -------------------------------------------------
-# 5. Share latest data with the AI Diagnostics page
-# -------------------------------------------------
 st.session_state["latest_telemetry"] = telemetry
 
 # -------------------------------------------------
-# 6. Render Header & KPI Cards
+# KPIs
 # -------------------------------------------------
 render_kpis(telemetry, controls['outdoor_temp'])
 
 # -------------------------------------------------
-# 7. Render the original 3 tabs only
+# Main Tabs (Everything on one page)
 # -------------------------------------------------
-tab1, tab2, tab3 = st.tabs([
-    "📊 Live Telemetry Overview",
-    "📜 Chronological Event Log",
-    "📈 Trend Analysis"
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Live Telemetry",
+    "Event Log",
+    "Trend Analysis",
+    "AI Diagnostics"
 ])
 
 with tab1:
@@ -86,8 +83,17 @@ with tab2:
 with tab3:
     render_analytics_tab()
 
+with tab4:
+    # Clean separator for the AI section
+    st.markdown("### AI Fault Intelligence & Optimization")
+    st.caption("Real-time fault detection • Predictive early warnings • Actionable energy savings")
+    
+    history = st.session_state.get("telemetry_history")
+    diagnostics = diagnose(telemetry, history)
+    render_diagnostics_tab(diagnostics)
+
 # -------------------------------------------------
-# 8. Polling Interval Tick
+# Auto-refresh
 # -------------------------------------------------
 time.sleep(1)
 st.rerun()

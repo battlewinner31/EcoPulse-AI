@@ -4,17 +4,15 @@ import pandas as pd
 from datetime import datetime
 from io import BytesIO
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from core.diagnostics import Diagnostic
 
 
 def render_diagnostics_tab(diagnostics: list[Diagnostic]):
-    st.subheader("AI Fault Intelligence & Optimization")
-
     if not diagnostics:
-        st.success("No active faults or early warnings detected. All systems operating within normal parameters.")
-        st.info("EcoPulse AI runs continuous rule-based + statistical analysis after every telemetry cycle.")
+        st.success("All systems operating normally. No active faults or early warnings.")
+        st.info("EcoPulse AI continuously analyses telemetry using rule-based and statistical models.")
         return
 
     # ------------------------------------------------------------------
@@ -23,24 +21,25 @@ def render_diagnostics_tab(diagnostics: list[Diagnostic]):
     critical = sum(1 for d in diagnostics if d.severity == "CRITICAL")
     high = sum(1 for d in diagnostics if d.severity == "HIGH")
     early = sum(1 for d in diagnostics if d.severity == "EARLY WARNING")
+
     total_impact_kw = sum(d.energy_impact_kw for d in diagnostics)
     total_savings_kw = sum(d.estimated_savings_kw for d in diagnostics)
     total_savings_day = sum(d.estimated_savings_inr_per_day for d in diagnostics)
     total_savings_month = sum(d.estimated_savings_inr_per_month for d in diagnostics)
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Active Issues", len(diagnostics))
-    c2.metric("Critical / High", f"{critical} / {high}")
-    c3.metric("Early Warnings", early)
-    c4.metric("Current Extra Power", f"{total_impact_kw:.1f} kW")
-    c5.metric("Potential Daily Savings", f"₹{total_savings_day:,.0f}")
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric("Active Issues", len(diagnostics))
+    m2.metric("Critical / High", f"{critical} / {high}")
+    m3.metric("Early Warnings", early)
+    m4.metric("Extra Power", f"{total_impact_kw:.1f} kW")
+    m5.metric("Potential Daily Savings", f"₹{total_savings_day:,.0f}")
 
     st.markdown("---")
 
     # ------------------------------------------------------------------
-    # Visual Charts
+    # Charts
     # ------------------------------------------------------------------
-    st.subheader("Energy Impact & Savings Opportunity by Equipment")
+    st.markdown("#### Energy Waste vs Recoverable Savings")
 
     chart_data = []
     for d in diagnostics:
@@ -54,21 +53,23 @@ def render_diagnostics_tab(diagnostics: list[Diagnostic]):
         df_chart = pd.DataFrame(chart_data)
         df_chart = df_chart.groupby("Equipment", as_index=False).sum(numeric_only=True)
 
-        col_left, col_right = st.columns(2)
-        with col_left:
+        col1, col2 = st.columns(2)
+        with col1:
             st.markdown("**Current Extra Power Draw**")
             st.bar_chart(df_chart.set_index("Equipment")[["Current Extra Power (kW)"]])
-        with col_right:
+        with col2:
             st.markdown("**Recoverable Savings After Fix**")
             st.bar_chart(df_chart.set_index("Equipment")[["Recoverable Savings (kW)"]])
 
-        st.caption("Left: where energy is currently being wasted. Right: realistic savings once recommended actions are completed.")
+        st.caption("Left chart = energy currently being wasted. Right chart = realistic savings after recommended actions.")
 
     st.markdown("---")
 
     # ------------------------------------------------------------------
-    # Detailed Cards
+    # Detailed Findings
     # ------------------------------------------------------------------
+    st.markdown("#### Detailed Findings")
+
     for d in diagnostics:
         color = {
             "CRITICAL": "🔴",
@@ -90,20 +91,17 @@ def render_diagnostics_tab(diagnostics: list[Diagnostic]):
             for cause in d.probable_causes:
                 st.write(f"- {cause['cause']} *(confidence {cause['confidence']:.0%})*")
 
-            col_a, col_b, col_c = st.columns(3)
-            with col_a:
-                st.metric("Extra Power Now", f"{d.energy_impact_kw:.1f} kW")
-            with col_b:
-                st.metric("Recoverable Savings", f"{d.estimated_savings_kw:.1f} kW")
-            with col_c:
-                st.metric("Est. Monthly Savings", f"₹{d.estimated_savings_inr_per_month:,.0f}")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Extra Power Now", f"{d.energy_impact_kw:.1f} kW")
+            c2.metric("Recoverable Savings", f"{d.estimated_savings_kw:.1f} kW")
+            c3.metric("Est. Monthly Savings", f"₹{d.estimated_savings_inr_per_month:,.0f}")
 
             st.markdown("**Immediate Recommended Actions**")
             for i, action in enumerate(d.recommended_actions, 1):
                 st.write(f"{i}. {action}")
 
             if d.optimization_suggestions:
-                st.markdown("**Optimization & Setpoint Recommendations**")
+                st.markdown("**Optimization Recommendations**")
                 for i, sug in enumerate(d.optimization_suggestions, 1):
                     st.write(f"{i}. {sug}")
 
@@ -121,9 +119,9 @@ def render_diagnostics_tab(diagnostics: list[Diagnostic]):
     )
 
     # ------------------------------------------------------------------
-    # Downloadable Word Document Report
+    # Download Word Report
     # ------------------------------------------------------------------
-    st.subheader("Download Official EcoPulse AI Report")
+    st.markdown("#### Download Official Report")
 
     docx_bytes = _build_docx_report(
         diagnostics,
@@ -133,7 +131,7 @@ def render_diagnostics_tab(diagnostics: list[Diagnostic]):
     )
 
     st.download_button(
-        label="Download EcoPulse AI Diagnostic & Optimization Report (.docx)",
+        label="Download EcoPulse AI Report (.docx)",
         data=docx_bytes,
         file_name=f"EcoPulse_AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -148,7 +146,6 @@ def _build_docx_report(
 ) -> bytes:
     doc = Document()
 
-    # Title
     title = doc.add_heading("EcoPulse AI", level=0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -158,7 +155,6 @@ def _build_docx_report(
     doc.add_paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     doc.add_paragraph("")
 
-    # Summary
     doc.add_heading("Executive Summary", level=1)
     doc.add_paragraph(f"Total Active Issues: {len(diagnostics)}")
     doc.add_paragraph(f"Total Recoverable Power: {total_savings_kw:.1f} kW")
@@ -166,7 +162,6 @@ def _build_docx_report(
     doc.add_paragraph(f"Estimated Monthly Savings: ₹{total_savings_month:,.0f}")
     doc.add_paragraph("")
 
-    # Detailed findings
     doc.add_heading("Detailed Findings & Recommendations", level=1)
 
     for d in diagnostics:
@@ -195,7 +190,6 @@ def _build_docx_report(
         doc.add_paragraph(f"Responsible Team: {d.responsible_team}")
         doc.add_paragraph("")
 
-    # Final savings box
     doc.add_heading("Total Potential Savings", level=1)
     doc.add_paragraph(f"Continuous power recovery: {total_savings_kw:.1f} kW")
     doc.add_paragraph(f"Daily cost reduction: ₹{total_savings_day:,.0f}")
@@ -206,12 +200,9 @@ def _build_docx_report(
         "and systems return to design operating points."
     )
 
-    # Footer
-    doc.add_paragraph("")
     footer = doc.add_paragraph("Generated by EcoPulse AI — Intelligent Virtual Building Management System")
     footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Save to bytes
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
